@@ -1,544 +1,669 @@
 #!/usr/bin/env python3
 """
-真实简易风格液压支撑臂原理图
-元器件使用接近真实外观的2D简化绘制
+真实风格液压支撑臂原理图 (带完整动画与交互逻辑)
+修复了布局、添加了流动动画脚本、技术参数、设备标牌和停止按钮
 """
-import urllib.request, json
+import urllib.request, json, time
 
 BASE_URL = 'http://localhost:1881'
 
-svg = '''<svg width="1400" height="900" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg">
+svg = '''<svg width="1600" height="950" viewBox="0 0 1600 950" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
  <defs>
-  <!-- 金属质感渐变(水平) -->
+  <!-- 重金属质感渐变(水平/垂直) -->
   <linearGradient id="metalH" x1="0" y1="0" x2="0" y2="1">
-   <stop offset="0%" stop-color="#D0D0D0"/>
-   <stop offset="25%" stop-color="#B8B8B8"/>
-   <stop offset="50%" stop-color="#A8A8A8"/>
-   <stop offset="75%" stop-color="#C0C0C0"/>
-   <stop offset="100%" stop-color="#989898"/>
+   <stop offset="0%" stop-color="#D0D0D0"/><stop offset="25%" stop-color="#B8B8B8"/>
+   <stop offset="50%" stop-color="#A8A8A8"/><stop offset="75%" stop-color="#C0C0C0"/><stop offset="100%" stop-color="#989898"/>
   </linearGradient>
-  <!-- 金属质感(垂直) -->
   <linearGradient id="metalV" x1="0" y1="0" x2="1" y2="0">
-   <stop offset="0%" stop-color="#C8C8C8"/>
-   <stop offset="30%" stop-color="#A8A8A8"/>
-   <stop offset="70%" stop-color="#B8B8B8"/>
-   <stop offset="100%" stop-color="#909090"/>
+   <stop offset="0%" stop-color="#C8C8C8"/><stop offset="30%" stop-color="#A8A8A8"/>
+   <stop offset="70%" stop-color="#B8B8B8"/><stop offset="100%" stop-color="#909090"/>
   </linearGradient>
-  <!-- 油箱钢板 -->
+  <!-- 外壳颜色梯队 -->
   <linearGradient id="tankBody" x1="0" y1="0" x2="0" y2="1">
-   <stop offset="0%" stop-color="#607D8B"/>
-   <stop offset="50%" stop-color="#455A64"/>
-   <stop offset="100%" stop-color="#37474F"/>
+   <stop offset="0%" stop-color="#546E7A"/><stop offset="50%" stop-color="#37474F"/><stop offset="100%" stop-color="#263238"/>
   </linearGradient>
-  <!-- 油液 -->
-  <linearGradient id="oilFill" x1="0" y1="0" x2="0" y2="1">
-   <stop offset="0%" stop-color="#FFB300"/>
-   <stop offset="100%" stop-color="#E65100"/>
-  </linearGradient>
-  <!-- 电机壳体 -->
   <linearGradient id="motorShell" x1="0" y1="0" x2="0" y2="1">
-   <stop offset="0%" stop-color="#78909C"/>
-   <stop offset="20%" stop-color="#546E7A"/>
-   <stop offset="80%" stop-color="#455A64"/>
-   <stop offset="100%" stop-color="#37474F"/>
+   <stop offset="0%" stop-color="#607D8B"/><stop offset="20%" stop-color="#455A64"/>
+   <stop offset="80%" stop-color="#37474F"/><stop offset="100%" stop-color="#263238"/>
   </linearGradient>
-  <!-- 泵壳体(深蓝灰) -->
   <linearGradient id="pumpShell" x1="0" y1="0" x2="0" y2="1">
-   <stop offset="0%" stop-color="#5C6BC0"/>
-   <stop offset="50%" stop-color="#3949AB"/>
-   <stop offset="100%" stop-color="#283593"/>
+   <stop offset="0%" stop-color="#3F51B5"/><stop offset="50%" stop-color="#283593"/><stop offset="100%" stop-color="#1A237E"/>
   </linearGradient>
-  <!-- 阀体(深灰) -->
   <linearGradient id="valveBody" x1="0" y1="0" x2="0" y2="1">
-   <stop offset="0%" stop-color="#6D6D6D"/>
-   <stop offset="30%" stop-color="#555555"/>
-   <stop offset="100%" stop-color="#3D3D3D"/>
+   <stop offset="0%" stop-color="#757575"/><stop offset="30%" stop-color="#616161"/><stop offset="100%" stop-color="#424242"/>
   </linearGradient>
-  <!-- 电磁铁 -->
-  <linearGradient id="solenoid" x1="0" y1="0" x2="0" y2="1">
-   <stop offset="0%" stop-color="#1565C0"/>
-   <stop offset="100%" stop-color="#0D47A1"/>
-  </linearGradient>
-  <!-- 液压缸缸筒 -->
   <linearGradient id="cylTube" x1="0" y1="0" x2="0" y2="1">
-   <stop offset="0%" stop-color="#B0BEC5"/>
-   <stop offset="25%" stop-color="#90A4AE"/>
-   <stop offset="50%" stop-color="#78909C"/>
-   <stop offset="75%" stop-color="#90A4AE"/>
-   <stop offset="100%" stop-color="#607D8B"/>
+   <stop offset="0%" stop-color="#B0BEC5"/><stop offset="25%" stop-color="#90A4AE"/>
+   <stop offset="50%" stop-color="#78909C"/><stop offset="75%" stop-color="#90A4AE"/><stop offset="100%" stop-color="#607D8B"/>
   </linearGradient>
-  <!-- 活塞杆(亮银) -->
+  
+  <!-- 内部/细节特效 -->
+  <linearGradient id="oilFill" x1="0" y1="0" x2="0" y2="1">
+   <stop offset="0%" stop-color="#FFCA28"/><stop offset="100%" stop-color="#EF6C00"/>
+  </linearGradient>
+  <linearGradient id="solenoid" x1="0" y1="0" x2="0" y2="1">
+   <stop offset="0%" stop-color="#1976D2"/><stop offset="100%" stop-color="#0D47A1"/>
+  </linearGradient>
   <linearGradient id="rodGrad" x1="0" y1="0" x2="0" y2="1">
-   <stop offset="0%" stop-color="#E0E0E0"/>
-   <stop offset="40%" stop-color="#F5F5F5"/>
-   <stop offset="60%" stop-color="#E8E8E8"/>
-   <stop offset="100%" stop-color="#BDBDBD"/>
+   <stop offset="0%" stop-color="#F5F5F5"/><stop offset="40%" stop-color="#FFFFFF"/>
+   <stop offset="60%" stop-color="#EEEEEE"/><stop offset="100%" stop-color="#BDBDBD"/>
   </linearGradient>
-  <!-- 压力管(蓝) -->
-  <linearGradient id="pipeBlue" x1="0" y1="0" x2="0" y2="1">
-   <stop offset="0%" stop-color="#42A5F5"/>
-   <stop offset="50%" stop-color="#1E88E5"/>
-   <stop offset="100%" stop-color="#1565C0"/>
-  </linearGradient>
-  <linearGradient id="pipeBlueH" x1="0" y1="0" x2="1" y2="0">
-   <stop offset="0%" stop-color="#42A5F5"/>
-   <stop offset="50%" stop-color="#1E88E5"/>
-   <stop offset="100%" stop-color="#1565C0"/>
-  </linearGradient>
-  <!-- 回油管(橙) -->
-  <linearGradient id="pipeOrange" x1="0" y1="0" x2="0" y2="1">
-   <stop offset="0%" stop-color="#FFA726"/>
-   <stop offset="50%" stop-color="#FB8C00"/>
-   <stop offset="100%" stop-color="#E65100"/>
-  </linearGradient>
-  <linearGradient id="pipeOrangeH" x1="0" y1="0" x2="1" y2="0">
-   <stop offset="0%" stop-color="#FFA726"/>
-   <stop offset="50%" stop-color="#FB8C00"/>
-   <stop offset="100%" stop-color="#E65100"/>
-  </linearGradient>
-  <!-- 表盘 -->
+
   <radialGradient id="gaugeface" cx="50%" cy="50%" r="50%">
-   <stop offset="0%" stop-color="#FAFAFA"/>
-   <stop offset="85%" stop-color="#F0F0F0"/>
-   <stop offset="100%" stop-color="#BDBDBD"/>
+   <stop offset="0%" stop-color="#FFFFFF"/><stop offset="85%" stop-color="#F5F5F5"/><stop offset="100%" stop-color="#E0E0E0"/>
   </radialGradient>
-  <!-- 阴影 -->
-  <filter id="shadow">
-   <feDropShadow dx="2" dy="3" stdDeviation="3" flood-color="rgba(0,0,0,0.25)"/>
+
+  <!-- 阴影特效 -->
+  <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+   <feDropShadow dx="3" dy="4" stdDeviation="4" flood-color="rgba(0,0,0,0.3)"/>
   </filter>
-  <filter id="shSm">
-   <feDropShadow dx="1" dy="1" stdDeviation="1.5" flood-color="rgba(0,0,0,0.2)"/>
+  <filter id="shSm" x="-10%" y="-10%" width="120%" height="120%">
+   <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.2)"/>
   </filter>
-  <!-- 流动箭头 -->
-  <marker id="arB" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="4" markerHeight="4" orient="auto">
-   <path d="M 0 1 L 6 4 L 0 7 z" fill="#1E88E5"/>
-  </marker>
-  <marker id="arO" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="4" markerHeight="4" orient="auto">
-   <path d="M 0 1 L 6 4 L 0 7 z" fill="#FB8C00"/>
-  </marker>
  </defs>
+
  <g>
-  <title>Layer 1</title>
-  <!-- 浅灰工业背景 -->
-  <rect id="svg_bg" fill="#ECEFF1" height="900" width="1400"/>
+  <!-- ========================================== -->
+  <!-- 背景与标题 -->
+  <rect id="svg_bg" fill="#E8EAED" width="1600" height="950"/>
+  
+  <rect x="450" y="15" width="700" height="46" rx="6" fill="#2C3E50" filter="url(#shadow)"/>
+  <text x="800" y="45" text-anchor="middle" font-family="SimHei,Arial" font-size="22" fill="#ECEFF1" font-weight="bold">液压支撑臂真实控制系统 (FUXA SCADA)</text>
 
-  <!-- ============ 标题 ============ -->
-  <rect id="svg_hd0" x="350" y="8" width="700" height="42" rx="6" fill="#37474F" filter="url(#shadow)"/>
-  <text id="svg_hd1" x="700" y="36" text-anchor="middle" font-family="Arial" font-size="20" fill="#ECEFF1" font-weight="bold">液压支撑臂控制系统原理图</text>
-
-  <!-- ================================================================ -->
-  <!--                     管路层 (先画，设备覆盖)                       -->
-  <!-- 压力主管 y=255  蓝色管                                            -->
-  <!-- 回油主管 y=510  橙色管                                            -->
-  <!-- ================================================================ -->
-
-  <!-- == 压力主管 (水平 y=255) == -->
-  <rect id="svg_pm" x="168" y="248" width="530" height="14" rx="7" fill="url(#pipeBlueH)" filter="url(#shSm)"/>
-  <!-- 流动指示(虚线动画) -->
-  <line id="svg_pmf" x1="170" y1="255" x2="696" y2="255" stroke="#90CAF9" stroke-width="3" stroke-dasharray="14 10" opacity="0.7">
-   <animate attributeName="stroke-dashoffset" from="0" to="-24" dur="0.7s" repeatCount="indefinite"/>
+  <!-- ========================================== -->
+  <!-- 下层: 管路系统 (先画,被设备盖住) -->
+  
+  <!-- 管路配色(支持脚本动态更改颜色): P/B=蓝色 T/A=橙色 初始静止=灰 -->
+  <!-- P 压力主管 y=280-->
+  <rect id="pipePm" x="210" y="272" width="600" height="16" rx="8" fill="#42A5F5" filter="url(#shSm)"/>
+  <line id="flowP" x1="210" y1="280" x2="800" y2="280" stroke="#E3F2FD" stroke-width="4" stroke-dasharray="16 12" opacity="0">
+   <animate attributeName="stroke-dashoffset" from="0" to="-28" dur="0.6s" repeatCount="indefinite"/>
   </line>
 
-  <!-- == 泵吸油管 (油箱→泵 垂直) == -->
-  <rect id="svg_sm" x="168" y="420" width="14" height="80" rx="7" fill="url(#pipeBlue)" filter="url(#shSm)"/>
-  <line id="svg_smf" x1="175" y1="498" x2="175" y2="420" stroke="#90CAF9" stroke-width="3" stroke-dasharray="10 8" opacity="0.5">
-   <animate attributeName="stroke-dashoffset" from="0" to="18" dur="0.8s" repeatCount="indefinite"/>
+  <!-- T 回油主管 y=560 -->
+  <rect id="pipeRm" x="210" y="552" width="600" height="16" rx="8" fill="#FFA726" filter="url(#shSm)"/>
+  <line id="flowT" x1="800" y1="560" x2="210" y2="560" stroke="#FFF3E0" stroke-width="4" stroke-dasharray="16 12" opacity="0">
+   <animate attributeName="stroke-dashoffset" from="0" to="-28" dur="0.6s" repeatCount="indefinite"/>
   </line>
 
-  <!-- == 泵出口管 (泵→压力主管 垂直) == -->
-  <rect id="svg_po" x="168" y="255" width="14" height="76" rx="7" fill="url(#pipeBlue)" filter="url(#shSm)"/>
-  <line id="svg_pof" x1="175" y1="330" x2="175" y2="256" stroke="#90CAF9" stroke-width="3" stroke-dasharray="10 8" opacity="0.7">
-   <animate attributeName="stroke-dashoffset" from="0" to="18" dur="0.8s" repeatCount="indefinite"/>
+  <!-- 吸油管 (油箱到泵) -->
+  <rect id="pipeSp" x="210" y="460" width="16" height="100" rx="8" fill="#42A5F5" filter="url(#shSm)"/>
+  <line id="flowS" x1="218" y1="550" x2="218" y2="460" stroke="#E3F2FD" stroke-width="4" stroke-dasharray="12 10" opacity="0">
+   <animate attributeName="stroke-dashoffset" from="0" to="22" dur="0.7s" repeatCount="indefinite"/>
   </line>
 
-  <!-- == 溢流阀分支管(压力管→溢流阀) == -->
-  <rect id="svg_rvp0" x="398" y="262" width="14" height="30" rx="7" fill="url(#pipeBlue)"/>
-  <!-- == 溢流阀出口→回油管 == -->
-  <rect id="svg_rvp1" x="398" y="344" width="14" height="173" rx="7" fill="url(#pipeOrange)"/>
-  <line id="svg_rvpf" x1="405" y1="346" x2="405" y2="515" stroke="#FFE0B2" stroke-width="2" stroke-dasharray="8 8" opacity="0.4">
-   <animate attributeName="stroke-dashoffset" from="0" to="-16" dur="1s" repeatCount="indefinite"/>
+  <!-- 出油管 (泵到P主管) -->
+  <rect id="pipeDp" x="210" y="280" width="16" height="80" rx="8" fill="#42A5F5" filter="url(#shSm)"/>
+  <line id="flowD" x1="218" y1="355" x2="218" y2="280" stroke="#E3F2FD" stroke-width="4" stroke-dasharray="12 10" opacity="0">
+   <animate attributeName="stroke-dashoffset" from="0" to="22" dur="0.7s" repeatCount="indefinite"/>
   </line>
 
-  <!-- == 换向阀P口连接(压力管→阀) == -->
-  <rect id="svg_dvpc" x="618" y="262" width="14" height="38" rx="7" fill="url(#pipeBlue)"/>
-  <!-- == 换向阀T口→回油管 == -->
-  <rect id="svg_dvtc" x="668" y="370" width="14" height="147" rx="7" fill="url(#pipeOrange)"/>
-  <line id="svg_dvtf" x1="675" y1="372" x2="675" y2="515" stroke="#FFE0B2" stroke-width="2" stroke-dasharray="8 8" opacity="0.5">
-   <animate attributeName="stroke-dashoffset" from="0" to="-16" dur="0.8s" repeatCount="indefinite"/>
+  <!-- 溢流阀管路 -->
+  <rect id="pipeRVp" x="430" y="288" width="16" height="30" rx="8" fill="#42A5F5"/>
+  <rect id="pipeRVt" x="430" y="378" width="16" height="182" rx="8" fill="#FFA726"/>
+  <line id="flowRV" x1="438" y1="380" x2="438" y2="560" stroke="#FFF3E0" stroke-width="3" stroke-dasharray="10 8" opacity="0">
+   <animate attributeName="stroke-dashoffset" from="0" to="-18" dur="0.8s" repeatCount="indefinite"/>
   </line>
 
-  <!-- == A管(换向阀→液压缸无杆腔) 向上再右拐 == -->
-  <rect id="svg_aV" x="618" y="170" width="14" height="92" rx="7" fill="url(#pipeBlue)"/>
-  <rect id="svg_aH" x="625" y="163" width="315" height="14" rx="7" fill="url(#pipeBlueH)" filter="url(#shSm)"/>
-  <rect id="svg_aD" x="933" y="170" width="14" height="62" rx="7" fill="url(#pipeBlue)"/>
-  <!-- A管流动 -->
-  <line id="svg_aVf" x1="625" y1="260" x2="625" y2="175" stroke="#90CAF9" stroke-width="2" stroke-dasharray="8 8" opacity="0.5">
-   <animate attributeName="stroke-dashoffset" from="0" to="16" dur="0.6s" repeatCount="indefinite"/>
-  </line>
-  <line id="svg_aHf" x1="630" y1="170" x2="938" y2="170" stroke="#90CAF9" stroke-width="2" stroke-dasharray="8 8" opacity="0.5">
-   <animate attributeName="stroke-dashoffset" from="0" to="-16" dur="0.6s" repeatCount="indefinite"/>
+  <!-- 换向阀P、T竖管 -->
+  <rect id="pipeDVp" x="710" y="288" width="16" height="42" rx="8" fill="#42A5F5"/>
+  <rect id="pipeDVt" x="760" y="408" width="16" height="152" rx="8" fill="#FFA726"/>
+  <line id="flowDVt" x1="768" y1="410" x2="768" y2="560" stroke="#FFF3E0" stroke-width="3" stroke-dasharray="10 8" opacity="0">
+   <animate attributeName="stroke-dashoffset" from="0" to="-18" dur="0.6s" repeatCount="indefinite"/>
   </line>
 
-  <!-- == B管(换向阀→液压缸有杆腔) 更高拐弯 == -->
-  <rect id="svg_bV" x="668" y="120" width="14" height="180" rx="7" fill="url(#pipeBlue)"/>
-  <rect id="svg_bH" x="675" y="113" width="420" height="14" rx="7" fill="url(#pipeBlueH)" filter="url(#shSm)"/>
-  <rect id="svg_bD" x="1088" y="120" width="14" height="112" rx="7" fill="url(#pipeBlue)"/>
-  <!-- B管流动 -->
-  <line id="svg_bHf" x1="680" y1="120" x2="1093" y2="120" stroke="#BBDEFB" stroke-width="2" stroke-dasharray="8 8" opacity="0.4">
-   <animate attributeName="stroke-dashoffset" from="0" to="-16" dur="0.6s" repeatCount="indefinite"/>
+  <!-- A管路(换向阀→无杆腔) -->
+  <rect id="pipeAv" x="710" y="180" width="16" height="110" rx="8" fill="#B0BEC5"/>
+  <rect id="pipeAh" x="718" y="172" width="370" height="16" rx="8" fill="#B0BEC5" filter="url(#shSm)"/>
+  <rect id="pipeAd" x="1072" y="180" width="16" height="60" rx="8" fill="#B0BEC5"/>
+  
+  <line id="flowAv" x1="718" y1="285" x2="718" y2="185" stroke="#FFF" stroke-width="3" stroke-dasharray="10 8" opacity="0">
+   <animate id="animAv" attributeName="stroke-dashoffset" from="0" to="18" dur="0.5s" repeatCount="indefinite"/>
+  </line>
+  <line id="flowAh" x1="720" y1="180" x2="1080" y2="180" stroke="#FFF" stroke-width="3" stroke-dasharray="10 8" opacity="0">
+   <animate id="animAh" attributeName="stroke-dashoffset" from="0" to="-18" dur="0.5s" repeatCount="indefinite"/>
   </line>
 
-  <!-- == 回油主管 (水平 y=510) == -->
-  <rect id="svg_rm" x="168" y="503" width="530" height="14" rx="7" fill="url(#pipeOrangeH)" filter="url(#shSm)"/>
-  <line id="svg_rmf" x1="696" y1="510" x2="170" y2="510" stroke="#FFE0B2" stroke-width="3" stroke-dasharray="14 10" opacity="0.5">
-   <animate attributeName="stroke-dashoffset" from="0" to="-24" dur="0.7s" repeatCount="indefinite"/>
+  <!-- B管路(换向阀→有杆腔) 更高位 -->
+  <rect id="pipeBv" x="760" y="130" width="16" height="160" rx="8" fill="#B0BEC5"/>
+  <rect id="pipeBh" x="768" y="122" width="480" height="16" rx="8" fill="#B0BEC5" filter="url(#shSm)"/>
+  <rect id="pipeBd" x="1232" y="130" width="16" height="110" rx="8" fill="#B0BEC5"/>
+
+  <line id="flowBh" x1="770" y1="130" x2="1240" y2="130" stroke="#FFF" stroke-width="3" stroke-dasharray="10 8" opacity="0">
+  <animate id="animBh" attributeName="stroke-dashoffset" from="0" to="-18" dur="0.5s" repeatCount="indefinite"/>
   </line>
 
-  <!-- 管路标签 -->
-  <text id="svg_pml" x="370" y="244" text-anchor="middle" font-family="Arial" font-size="10" fill="#1565C0" font-weight="bold">P 压力油路</text>
-  <text id="svg_rml" x="370" y="530" text-anchor="middle" font-family="Arial" font-size="10" fill="#E65100" font-weight="bold">T 回油油路</text>
-  <text id="svg_aml" x="780" y="160" text-anchor="middle" font-family="Arial" font-size="9" fill="#1976D2">A管路(无杆腔)</text>
-  <text id="svg_bml" x="860" y="110" text-anchor="middle" font-family="Arial" font-size="9" fill="#1976D2">B管路(有杆腔)</text>
+  <!-- 管系文字标签 -->
+  <rect x="520" y="258" width="70" height="20" rx="3" fill="rgba(255,255,255,0.7)"/>
+  <text x="555" y="272" text-anchor="middle" font-family="Arial" font-size="12" fill="#1565C0" font-weight="bold">P 压力油路</text>
+  <rect x="520" y="538" width="70" height="20" rx="3" fill="rgba(255,255,255,0.7)"/>
+  <text x="555" y="552" text-anchor="middle" font-family="Arial" font-size="12" fill="#E65100" font-weight="bold">T 回油油路</text>
 
-  <!-- ================================================================ -->
-  <!--                          设备层                                   -->
-  <!-- ================================================================ -->
+  <!-- ========================================== -->
+  <!-- 设备层 -->
+  
+  <!-- === 1. 油箱系统 === -->
+  <g transform="translate(130, 550)">
+   <!-- 箱体 -->
+   <rect x="0" y="0" width="180" height="130" rx="6" fill="url(#tankBody)" stroke="#1A237E" stroke-width="2" filter="url(#shadow)"/>
+   <!-- 顶盖 -->
+   <rect x="0" y="0" width="180" height="15" rx="4" fill="#607D8B" stroke="#263238" stroke-width="1"/>
+   <!-- 加油口 -->
+   <path d="M 140 0 L 140 -10 L 160 -10 L 160 0 Z" fill="#455A64" stroke="#263238"/>
+   <rect x="135" y="-14" width="30" height="4" rx="2" fill="#78909C"/>
+   <!-- 视液窗 -->
+   <rect x="20" y="30" width="24" height="80" rx="12" fill="#202020" stroke="#455A64" stroke-width="3"/>
+   <rect x="24" y="34" width="16" height="72" rx="8" fill="#37474F"/>
+   <clipPath id="tkLvl"><rect x="24" y="34" width="16" height="72" rx="8"/></clipPath>
+   <rect id="oilLevel" x="24" y="45" width="16" height="61" fill="url(#oilFill)" clip-path="url(#tkLvl)"/>
+   <!-- 波纹 -->
+   <path id="oilWave" d="M 24 45 Q 28 42 32 45 Q 36 48 40 45" fill="none" stroke="#FFD54F" stroke-width="1" clip-path="url(#tkLvl)" opacity="0">
+    <animate attributeName="d" values="M 24 45 Q 28 42 32 45 Q 36 48 40 45;M 24 45 Q 28 48 32 45 Q 36 42 40 45;M 24 45 Q 28 42 32 45 Q 36 48 40 45" dur="1.5s" repeatCount="indefinite"/>
+   </path>
+   <!-- 温度/液位表盘 -->
+   <rect x="60" y="30" width="100" height="40" rx="4" fill="#FFF8E1" stroke="#FFB300" stroke-width="1"/>
+   <text x="65" y="45" font-family="Arial" font-size="11" fill="#E65100">Temp:</text>
+   <text x="155" y="45" text-anchor="end" font-family="monospace" font-size="13" fill="#BF360C" font-weight="bold">28.5 °C</text>
+   <text x="65" y="62" font-family="Arial" font-size="11" fill="#E65100">Level:</text>
+   <text x="155" y="62" text-anchor="end" font-family="monospace" font-size="13" fill="#BF360C" font-weight="bold">82.0 %</text>
+   <!-- 标牌 -->
+   <rect x="60" y="85" width="100" height="25" rx="2" fill="#37474F" stroke="#78909C" stroke-width="1"/>
+   <text x="110" y="102" text-anchor="middle" font-family="Arial" font-size="12" fill="#B0BEC5" font-weight="bold">OIL TANK 200L</text>
+  </g>
 
-  <!-- ===== 油箱 (真实钢制方箱, 带视液窗, 管接头) ===== -->
-  <!-- 箱体 -->
-  <rect id="svg_tk1" x="95" y="505" width="170" height="110" rx="5" fill="url(#tankBody)" stroke="#263238" stroke-width="2" filter="url(#shadow)"/>
-  <!-- 顶板(略浅) -->
-  <rect id="svg_tk2" x="95" y="505" width="170" height="12" rx="5" fill="#546E7A" stroke="#263238" stroke-width="1"/>
-  <!-- 加油口 -->
-  <circle id="svg_tk3" cx="240" cy="511" r="8" fill="#455A64" stroke="#37474F" stroke-width="2"/>
-  <circle id="svg_tk4" cx="240" cy="511" r="4" fill="#546E7A"/>
-  <!-- 视液窗(圆形, 能看到油位) -->
-  <circle id="svg_tk5" cx="180" cy="565" r="20" fill="#263238" stroke="#455A64" stroke-width="3"/>
-  <circle id="svg_tk6" cx="180" cy="565" r="16" fill="#37474F"/>
-  <!-- 油液(半满状态) -->
-  <clipPath id="tkClip"><circle cx="180" cy="565" r="15"/></clipPath>
-  <rect id="svg_tk7" x="164" y="558" width="32" height="24" fill="url(#oilFill)" clip-path="url(#tkClip)"/>
-  <!-- 油面波纹 -->
-  <path id="svg_tk8" d="M 164 558 Q 172 554 180 558 Q 188 562 196 558" fill="none" stroke="#FFD54F" stroke-width="1" clip-path="url(#tkClip)" opacity="0.8">
-   <animate attributeName="d" values="M 164 558 Q 172 554 180 558 Q 188 562 196 558;M 164 558 Q 172 562 180 558 Q 188 554 196 558;M 164 558 Q 172 554 180 558 Q 188 562 196 558" dur="2s" repeatCount="indefinite"/>
-  </path>
-  <!-- 排油口 -->
-  <rect id="svg_tk9" x="110" y="605" width="20" height="10" rx="3" fill="#455A64" stroke="#37474F" stroke-width="1"/>
-  <!-- 吸油管接头(顶部,连接到泵) -->
-  <rect id="svg_tka" x="170" y="497" width="20" height="12" rx="3" fill="url(#metalH)" stroke="#757575" stroke-width="1"/>
-  <!-- 回油管接头(顶部) -->
-  <rect id="svg_tkb" x="130" y="497" width="20" height="12" rx="3" fill="url(#metalH)" stroke="#757575" stroke-width="1"/>
-  <!-- 标签 -->
-  <text id="svg_tkn" x="180" y="600" text-anchor="middle" font-family="Arial" font-size="11" fill="#90A4AE" font-weight="bold">OIL TANK</text>
-  <!-- 温度/液位数据 -->
-  <rect id="svg_tkd" x="95" y="620" width="170" height="38" rx="5" fill="#FFF8E1" stroke="#FFB300" stroke-width="1" filter="url(#shSm)"/>
-  <text id="svg_tkd1" x="105" y="637" font-family="Arial" font-size="10" fill="#E65100">油温:</text>
-  <text id="svg_tkv1" x="195" y="637" text-anchor="end" font-family="monospace" font-size="12" fill="#BF360C" font-weight="bold">25.0 C</text>
-  <text id="svg_tkd2" x="105" y="652" font-family="Arial" font-size="10" fill="#E65100">液位:</text>
-  <text id="svg_tkv2" x="195" y="652" text-anchor="end" font-family="monospace" font-size="12" fill="#BF360C" font-weight="bold">85.0 %</text>
-  <!-- 液位条 -->
-  <rect id="svg_tklb" x="200" y="625" width="60" height="28" rx="3" fill="#ECEFF1" stroke="#FFB300" stroke-width="1"/>
-  <rect id="svg_tklv" x="202" y="629" width="56" height="20" rx="2" fill="#E8F5E9"/>
-  <rect id="svg_tklf" x="202" y="633" width="48" height="16" rx="2" fill="#FFB300" opacity="0.6"/>
+  <!-- === 2. 电动机 === -->
+  <g transform="translate(130, 390)">
+   <!-- 散热外壳 -->
+   <rect x="0" y="15" width="130" height="70" rx="10" fill="url(#motorShell)" stroke="#263238" stroke-width="2" filter="url(#shadow)"/>
+   <!-- 散热鳍片 -->
+   <line x1="15" y1="25" x2="115" y2="25" stroke="#37474F" stroke-width="2"/>
+   <line x1="15" y1="35" x2="115" y2="35" stroke="#37474F" stroke-width="2"/>
+   <line x1="15" y1="45" x2="115" y2="45" stroke="#37474F" stroke-width="2"/>
+   <line x1="15" y1="55" x2="115" y2="55" stroke="#37474F" stroke-width="2"/>
+   <line x1="15" y1="65" x2="115" y2="65" stroke="#37474F" stroke-width="2"/>
+   <line x1="15" y1="75" x2="115" y2="75" stroke="#37474F" stroke-width="2"/>
+   <!-- 前后端盖 -->
+   <rect x="0" y="15" width="18" height="70" rx="6" fill="#546E7A" stroke="#263238" stroke-width="1"/>
+   <rect x="112" y="15" width="18" height="70" rx="6" fill="#546E7A" stroke="#263238" stroke-width="1"/>
+   <!-- 接线盒 -->
+   <rect x="40" y="0" width="50" height="18" rx="3" fill="#455A64" stroke="#263238" stroke-width="1"/>
+   <path d="M 45 4 L 85 4 Z M 45 10 L 85 10 Z" stroke="#37474F" stroke-width="1.5"/>
+   <!-- 轴 -->
+   <rect x="60" y="-12" width="10" height="28" rx="2" fill="url(#metalV)"/>
+   <!-- 标牌指示灯 -->
+   <rect x="145" y="35" width="60" height="30" rx="4" fill="#ECEFF1" stroke="#CFD8DC" stroke-width="1"/>
+   <circle id="motorLED" cx="158" cy="50" r="6" fill="#9E9E9E" stroke="#757575" stroke-width="1"/>
+   <text id="motorTxt" x="185" y="54" text-anchor="middle" font-family="Arial" font-size="11" fill="#757575" font-weight="bold">STOP</text>
+   <text x="65" y="105" text-anchor="middle" font-family="Arial" font-size="11" fill="#455A64" font-weight="bold">MOTOR 7.5kW</text>
+  </g>
 
-  <!-- ===== 电动机 (真实感: 圆柱壳体+散热片+接线盒+轴) ===== -->
-  <!-- 电机壳体(主体圆角矩形) -->
-  <rect id="svg_mo1" x="115" y="380" width="120" height="55" rx="10" fill="url(#motorShell)" stroke="#263238" stroke-width="2" filter="url(#shadow)"/>
-  <!-- 散热片(横纹) -->
-  <line id="svg_mo2a" x1="125" y1="390" x2="225" y2="390" stroke="#37474F" stroke-width="1.5"/>
-  <line id="svg_mo2b" x1="125" y1="398" x2="225" y2="398" stroke="#37474F" stroke-width="1.5"/>
-  <line id="svg_mo2c" x1="125" y1="406" x2="225" y2="406" stroke="#37474F" stroke-width="1.5"/>
-  <line id="svg_mo2d" x1="125" y1="414" x2="225" y2="414" stroke="#37474F" stroke-width="1.5"/>
-  <line id="svg_mo2e" x1="125" y1="422" x2="225" y2="422" stroke="#37474F" stroke-width="1.5"/>
-  <!-- 前端盖 -->
-  <rect id="svg_mo3" x="115" y="380" width="16" height="55" rx="5" fill="#546E7A" stroke="#263238" stroke-width="1.5"/>
-  <!-- 后端盖 -->
-  <rect id="svg_mo4" x="219" y="380" width="16" height="55" rx="5" fill="#546E7A" stroke="#263238" stroke-width="1.5"/>
-  <!-- 接线盒(顶部) -->
-  <rect id="svg_mo5" x="155" y="370" width="40" height="14" rx="3" fill="#455A64" stroke="#263238" stroke-width="1"/>
-  <circle id="svg_mo6" cx="165" cy="377" r="3" fill="#37474F" stroke="#263238" stroke-width="0.5"/>
-  <circle id="svg_mo7" cx="175" cy="377" r="3" fill="#37474F" stroke="#263238" stroke-width="0.5"/>
-  <circle id="svg_mo8" cx="185" cy="377" r="3" fill="#37474F" stroke="#263238" stroke-width="0.5"/>
-  <!-- 电机铭牌 -->
-  <rect id="svg_mo9" x="140" y="400" width="50" height="18" rx="2" fill="#37474F" stroke="#546E7A" stroke-width="0.5"/>
-  <text id="svg_mo10" x="165" y="413" text-anchor="middle" font-family="Arial" font-size="9" fill="#B0BEC5" font-weight="bold">MOTOR</text>
-  <!-- 轴(连接到泵) -->
-  <rect id="svg_mox" x="170" y="333" width="10" height="48" rx="5" fill="url(#metalH)" stroke="#757575" stroke-width="1"/>
+  <!-- === 3. 齿轮泵 === -->
+  <g transform="translate(150, 270)">
+   <!-- 泵壳体 -->
+   <rect x="0" y="0" width="90" height="60" rx="12" fill="url(#pumpShell)" stroke="#1A237E" stroke-width="2" filter="url(#shadow)"/>
+   <!-- 旋转动画(代表活塞/齿轮工作) -->
+   <circle cx="28" cy="30" r="16" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2" stroke-dasharray="6 4"/>
+   <circle cx="62" cy="30" r="16" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2" stroke-dasharray="6 4"/>
+   <!-- 动画锚点 -->
+   <g id="pumpGear1" transform="rotate(0, 28, 30)">
+    <circle cx="28" cy="20" r="3" fill="rgba(255,255,255,0.4)"/>
+    <circle cx="28" cy="40" r="3" fill="rgba(255,255,255,0.4)"/>
+   </g>
+   <g id="pumpGear2" transform="rotate(0, 62, 30)">
+    <circle cx="62" cy="20" r="3" fill="rgba(255,255,255,0.4)"/>
+    <circle cx="62" cy="40" r="3" fill="rgba(255,255,255,0.4)"/>
+   </g>
+   <!-- 标牌 -->
+   <text x="45" y="34" text-anchor="middle" font-family="Arial" font-size="11" fill="#C5CAE9" font-weight="bold">PUMP</text>
+   <text x="45" y="46" text-anchor="middle" font-family="Arial" font-size="9" fill="#9FA8DA">16mL/r</text>
+  </g>
 
-  <!-- 电机状态 -->
-  <rect id="svg_mos" x="240" y="393" width="75" height="25" rx="5" fill="#E8F5E9" stroke="#4CAF50" stroke-width="1" filter="url(#shSm)"/>
-  <circle id="svg_moi" cx="254" cy="406" r="5" fill="#4CAF50">
-   <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite"/>
-  </circle>
-  <text id="svg_mov" x="277" y="410" text-anchor="middle" font-family="monospace" font-size="11" fill="#2E7D32" font-weight="bold">停止</text>
+  <!-- === 4. 压力表 === -->
+  <g transform="translate(320, 160)">
+   <!-- 连接管 -->
+   <rect x="25" y="80" width="10" height="35" rx="3" fill="url(#metalV)" stroke="#757575"/>
+   <!-- 表壳 -->
+   <circle cx="30" cy="40" r="38" fill="#424242" stroke="#212121" stroke-width="4" filter="url(#shadow)"/>
+   <circle cx="30" cy="40" r="33" fill="url(#gaugeface)"/>
+   <!-- 刻度弧 -->
+   <path d="M 8 55 A 26 26 0 0 1 18 18" fill="none" stroke="#4CAF50" stroke-width="4" stroke-linecap="round"/>
+   <path d="M 18 18 A 26 26 0 0 1 48 22" fill="none" stroke="#FFC107" stroke-width="4" stroke-linecap="round"/>
+   <path d="M 48 22 A 26 26 0 0 1 54 53" fill="none" stroke="#F44336" stroke-width="4" stroke-linecap="round"/>
+   <text x="4" y="65" font-family="Arial" font-size="8" fill="#666">0</text>
+   <text x="48" y="16" font-family="Arial" font-size="8" fill="#666">16</text>
+   <text x="60" y="65" font-family="Arial" font-size="8" fill="#666">25</text>
+   <text x="30" y="58" text-anchor="middle" font-family="Arial" font-size="8" fill="#999">MPa</text>
+   <!-- 指针 -->
+   <g id="gaugeNeedleLRotate" transform="rotate(-40, 30, 40)">
+    <polygon points="28,45 32,45 30,12" fill="#D32F2F"/>
+    <circle cx="30" cy="40" r="4" fill="#D32F2F"/>
+   </g>
+   <!-- 数值板 -->
+   <rect x="80" y="30" width="90" height="30" rx="4" fill="#FCE4EC" stroke="#E91E63" stroke-width="1"/>
+   <text id="gaugePressTxt" x="125" y="51" text-anchor="middle" font-family="monospace" font-size="16" fill="#C62828" font-weight="bold">0.0 MPa</text>
+  </g>
 
-  <!-- ===== 液压泵 (真实齿轮泵: 壳体+进出油口+齿轮示意) ===== -->
-  <rect id="svg_pu0" x="130" y="290" width="90" height="46" rx="8" fill="url(#pumpShell)" stroke="#1A237E" stroke-width="2" filter="url(#shadow)"/>
-  <!-- 内部齿轮示意(两个啮合齿轮轮廓) -->
-  <circle id="svg_pu1" cx="158" cy="313" r="13" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" stroke-dasharray="4 3"/>
-  <circle id="svg_pu2" cx="182" cy="313" r="13" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" stroke-dasharray="4 3"/>
-  <!-- 旋转动画 -->
-  <circle id="svg_pu3" cx="158" cy="313" r="4" fill="rgba(255,255,255,0.3)">
-   <animateTransform attributeName="transform" type="rotate" from="0 158 313" to="360 158 313" dur="2s" repeatCount="indefinite"/>
-  </circle>
-  <circle id="svg_pu4" cx="182" cy="313" r="4" fill="rgba(255,255,255,0.3)">
-   <animateTransform attributeName="transform" type="rotate" from="360 182 313" to="0 182 313" dur="2s" repeatCount="indefinite"/>
-  </circle>
-  <!-- 方向箭头 -->
-  <polygon id="svg_pu5" points="170,296 175,302 165,302" fill="rgba(255,255,255,0.5)"/>
-  <!-- 进油口(底部) -->
-  <rect id="svg_pu6" x="170" y="334" width="14" height="10" rx="3" fill="url(#metalH)" stroke="#757575" stroke-width="1"/>
-  <!-- 出油口(顶部) -->
-  <rect id="svg_pu7" x="170" y="282" width="14" height="10" rx="3" fill="url(#metalH)" stroke="#757575" stroke-width="1"/>
-  <!-- 铭牌 -->
-  <text id="svg_pun" x="175" y="280" text-anchor="middle" font-family="Arial" font-size="9" fill="#9FA8DA" font-weight="bold">PUMP</text>
+  <!-- === 5. 溢流阀 === -->
+  <g transform="translate(410, 318)">
+   <rect x="0" y="0" width="56" height="60" rx="8" fill="url(#valveBody)" stroke="#212121" stroke-width="2" filter="url(#shadow)"/>
+   <!-- 阀芯六角端 -->
+   <path d="M 0 10 L 10 0 L 46 0 L 56 10 Z" fill="#616161" stroke="#424242"/>
+   <rect x="-6" y="25" width="68" height="15" rx="3" fill="#4D4D4D" stroke="#333" stroke-width="2"/>
+   <!-- 调节手柄 -->
+   <rect x="18" y="-12" width="20" height="12" rx="4" fill="#757575" stroke="#555" stroke-width="1.5"/>
+   <line x1="28" y1="0" x2="28" y2="10" stroke="#999" stroke-width="2"/>
+   <rect x="12" y="-16" width="32" height="6" rx="2" fill="#424242"/>
+   <text x="28" y="55" text-anchor="middle" font-family="Arial" font-size="10" fill="#BDBDBD" font-weight="bold">RELIEF VAL</text>
+   <text x="28" y="75" text-anchor="middle" font-family="Arial" font-size="10" fill="#EF5350" font-weight="bold">16.0 MPa</text>
+  </g>
 
-  <!-- ===== 压力表 (真实感: 圆形表盘+表壳+刻度+指针) ===== -->
-  <!-- 表壳 -->
-  <circle id="svg_pg0" cx="320" cy="210" r="28" fill="#424242" stroke="#212121" stroke-width="3" filter="url(#shadow)"/>
-  <!-- 表盘 -->
-  <circle id="svg_pg1" cx="320" cy="210" r="23" fill="url(#gaugeface)"/>
-  <!-- 刻度(弧段) -->
-  <path id="svg_pg2a" d="M 302 225 A 20 20 0 0 1 312 193" fill="none" stroke="#4CAF50" stroke-width="3" stroke-linecap="round"/>
-  <path id="svg_pg2b" d="M 312 193 A 20 20 0 0 1 335 200" fill="none" stroke="#FFC107" stroke-width="3" stroke-linecap="round"/>
-  <path id="svg_pg2c" d="M 335 200 A 20 20 0 0 1 338 225" fill="none" stroke="#F44336" stroke-width="3" stroke-linecap="round"/>
-  <!-- 刻度数字 -->
-  <text id="svg_pgn0" x="300" y="228" text-anchor="middle" font-family="Arial" font-size="6" fill="#666">0</text>
-  <text id="svg_pgn1" x="306" y="198" text-anchor="middle" font-family="Arial" font-size="6" fill="#666">10</text>
-  <text id="svg_pgn2" x="330" y="195" text-anchor="middle" font-family="Arial" font-size="6" fill="#666">20</text>
-  <text id="svg_pgn3" x="340" y="228" text-anchor="middle" font-family="Arial" font-size="6" fill="#666">30</text>
-  <!-- 指针 -->
-  <line id="svg_pg3" x1="320" y1="210" x2="305" y2="223" stroke="#D32F2F" stroke-width="1.5"/>
-  <circle id="svg_pg4" cx="320" cy="210" r="3" fill="#D32F2F"/>
-  <!-- 单位 -->
-  <text id="svg_pg5" x="320" y="222" text-anchor="middle" font-family="Arial" font-size="6" fill="#999">MPa</text>
-  <!-- 连接管 -->
-  <rect id="svg_pgp" x="316" y="236" width="8" height="22" rx="4" fill="url(#metalH)" stroke="#757575" stroke-width="1"/>
-  <!-- 压力数值 -->
-  <rect id="svg_pgd" x="355" y="198" width="85" height="24" rx="5" fill="#FCE4EC" stroke="#E91E63" stroke-width="1" filter="url(#shSm)"/>
-  <text id="svg_pgv" x="397" y="215" text-anchor="middle" font-family="monospace" font-size="14" fill="#C62828" font-weight="bold">0.0 MPa</text>
+  <!-- === 6. 换向阀 (包括电磁铁) === -->
+  <g transform="translate(560, 330)">
+   <!-- 主阀体 -->
+   <rect x="60" y="0" width="180" height="78" rx="6" fill="url(#valveBody)" stroke="#212121" stroke-width="2" filter="url(#shadow)"/>
+   <circle cx="75" cy="15" r="4" fill="#555" stroke="#444"/>
+   <circle cx="225" cy="15" r="4" fill="#555" stroke="#444"/>
+   <circle cx="75" cy="63" r="4" fill="#555" stroke="#444"/>
+   <circle cx="225" cy="63" r="4" fill="#555" stroke="#444"/>
 
-  <!-- ===== 溢流阀 (真实感: 六角阀体+弹簧调节帽+管接头) ===== -->
-  <!-- 阀体(主体) -->
-  <rect id="svg_rv1" x="385" y="288" width="40" height="60" rx="4" fill="url(#valveBody)" stroke="#212121" stroke-width="2" filter="url(#shadow)"/>
-  <!-- 六角螺纹外观 -->
-  <rect id="svg_rv2" x="382" y="300" width="46" height="16" rx="2" fill="#4D4D4D" stroke="#333" stroke-width="1"/>
-  <!-- 调节手柄(顶部旋钮) -->
-  <rect id="svg_rv3" x="394" y="278" width="22" height="14" rx="4" fill="#757575" stroke="#555" stroke-width="1.5"/>
-  <line id="svg_rv4" x1="405" y1="280" x2="405" y2="290" stroke="#999" stroke-width="1.5"/>
-  <!-- 弹簧 -->
-  <polyline id="svg_rv5" points="396,330 400,335 410,328 400,340 410,333 396,348" fill="none" stroke="#90A4AE" stroke-width="1.5"/>
-  <!-- 进出口接头 -->
-  <rect id="svg_rv6" x="398" y="258" width="14" height="32" rx="4" fill="url(#metalH)" stroke="#757575" stroke-width="1"/>
-  <rect id="svg_rv7" x="398" y="346" width="14" height="8" rx="3" fill="url(#metalH)" stroke="#757575" stroke-width="1"/>
-  <!-- 标签 -->
-  <text id="svg_rvn" x="405" y="365" text-anchor="middle" font-family="Arial" font-size="9" fill="#757575">溢流阀</text>
+   <!-- 状态指示屏 -->
+   <rect x="90" y="16" width="120" height="46" rx="4" fill="#212121" stroke="#555" stroke-width="2"/>
+   <!-- 左/中/右位块 -->
+   <rect id="posLeft" x="96" y="22" width="30" height="34" rx="2" fill="#333"/>
+   <text id="posLeftTxt" x="111" y="44" text-anchor="middle" font-family="Arial" font-size="10" fill="#4CAF50" opacity="0.3" font-weight="bold">升</text>
+   <rect id="posCenter" x="135" y="22" width="30" height="34" rx="2" fill="#444" stroke="#4CAF50" stroke-width="2"/>
+   <text id="posCenterTxt" x="150" y="44" text-anchor="middle" font-family="Arial" font-size="10" fill="#4CAF50" opacity="1.0" font-weight="bold">中</text>
+   <rect id="posRight" x="174" y="22" width="30" height="34" rx="2" fill="#333"/>
+   <text id="posRightTxt" x="189" y="44" text-anchor="middle" font-family="Arial" font-size="10" fill="#4CAF50" opacity="0.3" font-weight="bold">降</text>
 
-  <!-- ===== 三位四通电磁换向阀 (真实感: 阀体块+两端电磁铁+位置指示) ===== -->
-  <!-- 中央阀体(铝块) -->
-  <rect id="svg_dv0" x="580" y="300" width="130" height="72" rx="4" fill="url(#valveBody)" stroke="#212121" stroke-width="2" filter="url(#shadow)"/>
-  <!-- 阀体表面螺栓 -->
-  <circle id="svg_dvb1" cx="595" cy="315" r="4" fill="#555" stroke="#444" stroke-width="1"/>
-  <circle id="svg_dvb2" cx="695" cy="315" r="4" fill="#555" stroke="#444" stroke-width="1"/>
-  <circle id="svg_dvb3" cx="595" cy="357" r="4" fill="#555" stroke="#444" stroke-width="1"/>
-  <circle id="svg_dvb4" cx="695" cy="357" r="4" fill="#555" stroke="#444" stroke-width="1"/>
+   <!-- 电磁铁 A (左侧) -->
+   <rect x="25" y="10" width="35" height="58" rx="6" fill="url(#solenoid)" stroke="#0D47A1" stroke-width="2" filter="url(#shSm)"/>
+   <text x="42" y="32" text-anchor="middle" font-family="Arial" font-size="10" fill="#90CAF9" font-weight="bold">SOL</text>
+   <text x="42" y="52" text-anchor="middle" font-family="Arial" font-size="20" fill="#BBDEFB" font-weight="bold">A</text>
+   <circle id="ledA" cx="42" cy="60" r="4" fill="#4CAF50" opacity="0.2"/>
+   <rect x="35" y="4" width="14" height="6" rx="2" fill="#263238"/> <!-- 端子 -->
 
-  <!-- 三个位置方格(中央指示面板) -->
-  <rect id="svg_dvp0" x="610" y="318" width="70" height="36" rx="3" fill="#333" stroke="#555" stroke-width="1"/>
-  <!-- 左位 -->
-  <rect id="svg_dvp1" x="613" y="321" width="20" height="30" rx="2" fill="#2E3030"/>
-  <text id="svg_dvp1t" x="623" y="340" text-anchor="middle" font-family="Arial" font-size="8" fill="#81C784">升</text>
-  <!-- 中位(激活) -->
-  <rect id="svg_dvp2" x="636" y="321" width="20" height="30" rx="2" fill="#444" stroke="#81C784" stroke-width="1"/>
-  <text id="svg_dvp2t" x="646" y="340" text-anchor="middle" font-family="Arial" font-size="8" fill="#81C784" font-weight="bold">中</text>
-  <!-- 右位 -->
-  <rect id="svg_dvp3" x="659" y="321" width="20" height="30" rx="2" fill="#2E3030"/>
-  <text id="svg_dvp3t" x="669" y="340" text-anchor="middle" font-family="Arial" font-size="8" fill="#81C784">降</text>
+   <!-- 电磁铁 B (右侧) -->
+   <rect x="240" y="10" width="35" height="58" rx="6" fill="url(#solenoid)" stroke="#0D47A1" stroke-width="2" filter="url(#shSm)"/>
+   <text x="257" y="32" text-anchor="middle" font-family="Arial" font-size="10" fill="#90CAF9" font-weight="bold">SOL</text>
+   <text x="257" y="52" text-anchor="middle" font-family="Arial" font-size="20" fill="#BBDEFB" font-weight="bold">B</text>
+   <circle id="ledB" cx="257" cy="60" r="4" fill="#4CAF50" opacity="0.2"/>
+   <rect x="250" y="4" width="14" height="6" rx="2" fill="#263238"/>
 
-  <!-- P口(上, 进油) -->
-  <rect id="svg_dvPc" x="618" y="293" width="14" height="10" rx="3" fill="url(#metalH)" stroke="#757575" stroke-width="1"/>
-  <text id="svg_dvPt" x="625" y="292" text-anchor="middle" font-family="Arial" font-size="8" fill="#1976D2" font-weight="bold">P</text>
-  <!-- T口(下, 回油) -->
-  <rect id="svg_dvTc" x="668" y="370" width="14" height="10" rx="3" fill="url(#metalH)" stroke="#757575" stroke-width="1"/>
-  <text id="svg_dvTt" x="675" y="388" text-anchor="middle" font-family="Arial" font-size="8" fill="#E65100" font-weight="bold">T</text>
-  <!-- A口(左上) -->
-  <rect id="svg_dvAc" x="618" y="260" width="14" height="10" rx="3" fill="url(#metalH)" stroke="#757575" stroke-width="1"/>
-  <text id="svg_dvAt" x="611" y="268" text-anchor="end" font-family="Arial" font-size="8" fill="#1976D2" font-weight="bold">A</text>
-  <!-- B口(右上) -->
-  <rect id="svg_dvBc" x="668" y="260" width="14" height="10" rx="3" fill="url(#metalH)" stroke="#757575" stroke-width="1"/>
-  <text id="svg_dvBt" x="690" y="268" font-family="Arial" font-size="8" fill="#1976D2" font-weight="bold">B</text>
+   <text x="150" y="98" text-anchor="middle" font-family="Arial" font-size="13" fill="#616161" font-weight="bold">4/3 WAY VALVE</text>
+  </g>
 
-  <!-- 左侧电磁铁(SOL-A) -->
-  <rect id="svg_ea0" x="555" y="310" width="28" height="52" rx="4" fill="url(#solenoid)" stroke="#0D47A1" stroke-width="1.5" filter="url(#shSm)"/>
-  <text id="svg_ea1" x="569" y="322" text-anchor="middle" font-family="Arial" font-size="6" fill="#90CAF9">SOL</text>
-  <text id="svg_ea2" x="569" y="342" text-anchor="middle" font-family="Arial" font-size="14" fill="#BBDEFB" font-weight="bold">A</text>
-  <!-- LED指示灯 -->
-  <circle id="svg_ea3" cx="569" cy="355" r="4" fill="#4CAF50" opacity="0.3"/>
-  <!-- 接线端子 -->
-  <rect id="svg_ea4" x="562" y="305" width="14" height="7" rx="2" fill="#263238"/>
+  <!-- === 7. 液压缸 === -->
+  <g transform="translate(1080, 240)">
+   <!-- 缸体外壳 -->
+   <rect x="0" y="0" width="260" height="70" rx="8" fill="url(#cylTube)" stroke="#455A64" stroke-width="2" filter="url(#shadow)"/>
+   <line x1="5" y1="12" x2="255" y2="12" stroke="rgba(255,255,255,0.4)" stroke-width="3"/>
+   <line x1="5" y1="58" x2="255" y2="58" stroke="rgba(0,0,0,0.2)" stroke-width="2"/>
+   <!-- 左端盖与安装耳环 -->
+   <rect x="-16" y="-6" width="22" height="82" rx="4" fill="#546E7A" stroke="#37474F" stroke-width="2"/>
+   <circle cx="-35" cy="35" r="16" fill="url(#metalH)" stroke="#546E7A" stroke-width="2"/>
+   <circle cx="-35" cy="35" r="8" fill="#ECEFF1" stroke="#9E9E9E"/>
 
-  <!-- 右侧电磁铁(SOL-B) -->
-  <rect id="svg_eb0" x="707" y="310" width="28" height="52" rx="4" fill="url(#solenoid)" stroke="#0D47A1" stroke-width="1.5" filter="url(#shSm)"/>
-  <text id="svg_eb1" x="721" y="322" text-anchor="middle" font-family="Arial" font-size="6" fill="#90CAF9">SOL</text>
-  <text id="svg_eb2" x="721" y="342" text-anchor="middle" font-family="Arial" font-size="14" fill="#BBDEFB" font-weight="bold">B</text>
-  <circle id="svg_eb3" cx="721" cy="355" r="4" fill="#4CAF50" opacity="0.3"/>
-  <rect id="svg_eb4" x="714" y="305" width="14" height="7" rx="2" fill="#263238"/>
+   <!-- 右端盖与导向套 -->
+   <rect x="254" y="-6" width="26" height="82" rx="4" fill="#546E7A" stroke="#37474F" stroke-width="2"/>
+   <rect x="280" y="10" width="14" height="50" rx="2" fill="#78909C" stroke="#455A64" stroke-width="2"/>
+   
+   <!-- A/B 口管接座 -->
+   <rect x="0" y="-12" width="16" height="12" rx="2" fill="#78909C" stroke="#455A64" stroke-width="2"/>
+   <text x="8" y="-15" text-anchor="middle" font-family="Arial" font-size="12" fill="#1565C0" font-weight="bold">A</text>
+   <rect x="220" y="-12" width="16" height="12" rx="2" fill="#78909C" stroke="#455A64" stroke-width="2"/>
+   <text x="228" y="-15" text-anchor="middle" font-family="Arial" font-size="12" fill="#1565C0" font-weight="bold">B</text>
+   
+   <text x="130" y="40" text-anchor="middle" font-family="Arial" font-size="14" fill="#37474F" font-weight="bold">CYLINDER D63/d35</text>
 
-  <!-- 阀铭牌 -->
-  <text id="svg_dvn" x="645" y="390" text-anchor="middle" font-family="Arial" font-size="10" fill="#757575" font-weight="bold">三位四通电磁换向阀</text>
-  <!-- 阀状态 -->
-  <rect id="svg_dvsd" x="740" y="322" width="80" height="24" rx="5" fill="#E8F5E9" stroke="#4CAF50" stroke-width="1" filter="url(#shSm)"/>
-  <text id="svg_dvsl" x="750" y="338" font-family="Arial" font-size="9" fill="#2E7D32">阀位:</text>
-  <text id="svg_dvsv" x="810" y="338" text-anchor="end" font-family="monospace" font-size="11" fill="#1B5E20" font-weight="bold">中位</text>
+   <!-- 活塞与活塞杆 (动态组) -->
+   <!-- 初始态: offset=0 极限=120 -->
+   <g id="pistonGroup" transform="translate(0, 0)">
+    <!-- 杆 -->
+    <rect x="120" y="21" width="180" height="28" fill="url(#rodGrad)" stroke="#BDBDBD" stroke-width="1.5"/>
+    <line x1="120" y1="26" x2="300" y2="26" stroke="rgba(255,255,255,0.7)" stroke-width="2"/>
+    <!-- 内部活塞块表示(半透明透过缸壁) -->
+    <rect x="110" y="6" width="10" height="58" rx="2" fill="#2E3030" opacity="0.6"/>
+    <!-- 杆端耳环(带动支撑臂) -->
+    <circle cx="300" cy="35" r="16" fill="url(#metalH)" stroke="#757575" stroke-width="2"/>
+    <circle cx="300" cy="35" r="8" fill="#ECEFF1" stroke="#9E9E9E"/>
+   </g>
+  </g>
 
-  <!-- ===== 液压缸 (真实感: 缸筒+端盖+活塞+杆+密封+耳环) ===== -->
-  <!-- 尾端耳环(安装座) -->
-  <circle id="svg_cye0" cx="915" cy="258" r="12" fill="url(#metalH)" stroke="#757575" stroke-width="2"/>
-  <circle id="svg_cye1" cx="915" cy="258" r="5" fill="#ECEFF1" stroke="#9E9E9E" stroke-width="1"/>
-  <!-- 缸筒(主体圆柱) -->
-  <rect id="svg_cy0" x="920" y="228" width="200" height="60" rx="6" fill="url(#cylTube)" stroke="#546E7A" stroke-width="2" filter="url(#shadow)"/>
-  <!-- 缸筒高光线 -->
-  <line id="svg_cyhl" x1="925" y1="238" x2="1115" y2="238" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
-  <line id="svg_cyhl2" x1="925" y1="278" x2="1115" y2="278" stroke="rgba(0,0,0,0.15)" stroke-width="1"/>
-  <!-- 后端盖 -->
-  <rect id="svg_cy1" x="916" y="224" width="14" height="68" rx="4" fill="#78909C" stroke="#546E7A" stroke-width="2"/>
-  <!-- 前端盖(导向套) -->
-  <rect id="svg_cy2" x="1105" y="230" width="20" height="56" rx="4" fill="#78909C" stroke="#546E7A" stroke-width="2"/>
-  <!-- 活塞杆(亮银色, 从前端盖伸出) -->
-  <rect id="svg_cy3" x="1110" y="247" width="100" height="22" rx="11" fill="url(#rodGrad)" stroke="#9E9E9E" stroke-width="1.5"/>
-  <!-- 杆端关节轴承(耳环) -->
-  <circle id="svg_cye2" cx="1210" cy="258" r="14" fill="url(#metalH)" stroke="#757575" stroke-width="2"/>
-  <circle id="svg_cye3" cx="1210" cy="258" r="6" fill="#ECEFF1" stroke="#9E9E9E" stroke-width="1"/>
-  <!-- 活塞位置指示(内部) -->
-  <rect id="svg_cy4" x="1000" y="234" width="8" height="48" rx="2" fill="#546E7A" stroke="#455A64" stroke-width="1" opacity="0.6"/>
-  <!-- 油口标记 -->
-  <rect id="svg_cyAp" x="933" y="220" width="14" height="10" rx="3" fill="url(#metalH)" stroke="#757575" stroke-width="1"/>
-  <rect id="svg_cyBp" x="1088" y="220" width="14" height="10" rx="3" fill="url(#metalH)" stroke="#757575" stroke-width="1"/>
-  <text id="svg_cya" x="940" y="218" font-family="Arial" font-size="8" fill="#1976D2" font-weight="bold">A</text>
-  <text id="svg_cyb" x="1095" y="218" font-family="Arial" font-size="8" fill="#1976D2" font-weight="bold">B</text>
+  <!-- 行程状态板 -->
+  <rect x="1060" y="340" width="300" height="40" rx="6" fill="#E3F2FD" stroke="#64B5F6" stroke-width="1" filter="url(#shSm)"/>
+  <text x="1080" y="365" font-family="Arial" font-size="14" fill="#1565C0" font-weight="bold">行 程:</text>
+  <text id="strokeTxt" x="1330" y="365" text-anchor="end" font-family="monospace" font-size="18" fill="#0D47A1" font-weight="bold">0 %</text>
+  <rect x="1080" y="385" width="250" height="8" rx="4" fill="#CFD8DC"/>
+  <rect id="strokeBar" x="1080" y="385" width="0" height="8" rx="4" fill="#2196F3"/>
 
-  <!-- 缸铭牌 -->
-  <text id="svg_cyn" x="1020" y="266" text-anchor="middle" font-family="Arial" font-size="10" fill="#455A64" font-weight="bold">HYDRAULIC CYLINDER</text>
+  <!-- === 8. 支撑臂 === -->
+  <!-- 左枢轴 cx=1380 cy=275 ; 杆端枢轴位于piston.x+300. 当stroke=0, cx=1380. (距离0)
+       这里为了演示，枢轴设置得符合动画联动
+       支撑臂固定旋转点 cx=1280, cy=275
+       stroke=0 时，旋转0度.
+  -->
+  <g id="armGroup" transform="rotate(0, 1280, 275)">
+   <!-- 工字钢臂主体 -->
+   <line x1="1280" y1="275" x2="1480" y2="120" stroke="#5D4037" stroke-width="28" stroke-linecap="round" filter="url(#shadow)"/>
+   <line x1="1280" y1="275" x2="1480" y2="120" stroke="#8D6E63" stroke-width="18" stroke-linecap="round"/>
+   <line x1="1280" y1="275" x2="1480" y2="120" stroke="#795548" stroke-width="6" stroke-linecap="round"/>
+   <!-- 末端负载点 -->
+   <circle cx="1480" cy="120" r="12" fill="#A1887F" stroke="#5D4037" stroke-width="3"/>
+   <circle cx="1280" cy="275" r="12" fill="#5D4037" stroke="#3E2723" stroke-width="3"/>
+   <circle cx="1280" cy="275" r="5" fill="#A1887F"/>
+   <text x="1440" y="105" text-anchor="middle" font-family="SimHei,Arial" font-size="16" fill="#4E342E" font-weight="bold">负 载</text>
+  </g>
+  <!-- 支撑臂基座 -->
+  <rect x="1255" y="287" width="50" height="15" rx="4" fill="#4E342E" stroke="#3E2723" stroke-width="2"/>
+  <rect x="1240" y="302" width="80" height="12" rx="4" fill="#795548" stroke="#5D4037" stroke-width="2"/>
 
-  <!-- 行程数据 -->
-  <rect id="svg_cyd" x="920" y="298" width="200" height="24" rx="5" fill="#E3F2FD" stroke="#64B5F6" stroke-width="1" filter="url(#shSm)"/>
-  <text id="svg_cdl" x="930" y="314" font-family="Arial" font-size="10" fill="#1565C0">行程:</text>
-  <text id="svg_cdv" x="1110" y="314" text-anchor="end" font-family="monospace" font-size="13" fill="#0D47A1" font-weight="bold">0.0 %</text>
-  <!-- 行程进度条 -->
-  <rect id="svg_cpb0" x="920" y="326" width="200" height="8" rx="4" fill="#CFD8DC"/>
-  <rect id="svg_cpb1" x="920" y="326" width="0" height="8" rx="4" fill="#42A5F5"/>
+  <!-- === 9. 底部控制面板 === -->
+  <rect x="50" y="650" width="1500" height="280" rx="10" fill="#FFFFFF" stroke="#B0BEC5" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="50" y="650" width="1500" height="40" rx="10" fill="#37474F"/>
+  <rect x="50" y="680" width="1500" height="10" fill="#37474F"/>
+  <text x="800" y="678" text-anchor="middle" font-family="Arial" font-size="18" fill="#ECEFF1" font-weight="bold">控制台面板</text>
 
-  <!-- ===== 支撑臂 (机械结构) ===== -->
-  <!-- 臂体(工字钢截面) -->
-  <line id="svg_ar1" x1="1216" y1="258" x2="1330" y2="175" stroke="#6D4C41" stroke-width="18" stroke-linecap="round" filter="url(#shadow)"/>
-  <line id="svg_ar2" x1="1216" y1="258" x2="1330" y2="175" stroke="#8D6E63" stroke-width="12" stroke-linecap="round"/>
-  <!-- 工字钢中心线 -->
-  <line id="svg_ar3" x1="1216" y1="258" x2="1330" y2="175" stroke="#795548" stroke-width="4" stroke-linecap="round"/>
-  <!-- 铰接点(关节轴承) -->
-  <circle id="svg_ar4" cx="1216" cy="258" r="8" fill="#5D4037" stroke="#3E2723" stroke-width="2"/>
-  <circle id="svg_ar5" cx="1216" cy="258" r="3" fill="#8D6E63"/>
-  <!-- 末端(被支撑物) -->
-  <circle id="svg_ar6" cx="1330" cy="175" r="6" fill="#A1887F" stroke="#5D4037" stroke-width="2"/>
-  <!-- 基座 -->
-  <rect id="svg_ar7" x="1200" y="268" width="32" height="10" rx="3" fill="#5D4037" stroke="#3E2723" stroke-width="1"/>
-  <rect id="svg_ar8" x="1192" y="277" width="48" height="8" rx="3" fill="#8D6E63" stroke="#5D4037" stroke-width="1"/>
-  <text id="svg_arn" x="1290" y="165" text-anchor="middle" font-family="Arial" font-size="12" fill="#5D4037" font-weight="bold">支撑臂</text>
+  <!-- 动作说明 -->
+  <rect x="70" y="705" width="600" height="100" rx="6" fill="#F5F5F5" stroke="#E0E0E0"/>
+  <text x="85" y="725" font-family="Arial" font-size="13" fill="#333" font-weight="bold">动作逻辑:</text>
+  <text x="85" y="745" font-family="Arial" font-size="12" fill="#666">升起: 电磁铁A得电 → 左位接入 → 压力油进无杆腔 → 液压缸伸出 → 支撑臂上升</text>
+  <text x="85" y="765" font-family="Arial" font-size="12" fill="#666">降落: 电磁铁B得电 → 右位接入 → 压力油进有杆腔 → 液压缸缩回 → 支撑臂下降</text>
+  <text x="85" y="785" font-family="Arial" font-size="12" fill="#666">停止: 双电磁铁失电 → 弹簧回中位 → 四口全封持压锁定 → 系统待机</text>
 
-  <!-- ================================================================ -->
-  <!--                        图例                                       -->
-  <!-- ================================================================ -->
-  <rect id="svg_lg0" x="50" y="670" width="400" height="36" rx="6" fill="white" stroke="#BDBDBD" stroke-width="1" filter="url(#shSm)"/>
-  <text id="svg_lg1" x="65" y="693" font-family="Arial" font-size="10" fill="#555" font-weight="bold">图例:</text>
-  <rect id="svg_lg2" x="100" y="683" width="30" height="10" rx="5" fill="url(#pipeBlueH)"/>
-  <text id="svg_lg3" x="135" y="693" font-family="Arial" font-size="10" fill="#555">压力油路</text>
-  <rect id="svg_lg4" x="195" y="683" width="30" height="10" rx="5" fill="url(#pipeOrangeH)"/>
-  <text id="svg_lg5" x="230" y="693" font-family="Arial" font-size="10" fill="#555">回油油路</text>
-  <line id="svg_lg6" x1="290" y1="688" x2="320" y2="688" stroke="#90CAF9" stroke-width="2" stroke-dasharray="6 4"/>
-  <text id="svg_lg7" x="325" y="693" font-family="Arial" font-size="10" fill="#555">油液流动</text>
-  <circle id="svg_lg8" cx="395" cy="688" r="5" fill="url(#metalH)" stroke="#757575" stroke-width="1"/>
-  <text id="svg_lg9" x="405" y="693" font-family="Arial" font-size="10" fill="#555">管接头</text>
+  <!-- 操作按钮 -->
+  <g id="btnUp" cursor="pointer" transform="translate(690, 705)">
+   <rect x="0" y="0" width="230" height="60" rx="12" fill="#2E7D32" stroke="#1B5E20" stroke-width="2" filter="url(#shadow)"/>
+   <rect id="btnUpHov" x="4" y="4" width="222" height="20" rx="8" fill="rgba(255,255,255,0.15)"/>
+   <text x="115" y="38" text-anchor="middle" font-family="SimHei,Arial" font-size="28" fill="#FFF" font-weight="bold" pointer-events="none">升 起</text>
+  </g>
 
-  <!-- ================================================================ -->
-  <!--                     底部操作控制面板                               -->
-  <!-- ================================================================ -->
-  <rect id="svg_cp" x="50" y="720" width="1300" height="165" rx="8" fill="white" stroke="#BDBDBD" stroke-width="1" filter="url(#shadow)"/>
-  <rect id="svg_cph" x="50" y="720" width="1300" height="30" rx="8" fill="#37474F"/>
-  <rect id="svg_cph2" x="50" y="740" width="1300" height="10" fill="#37474F"/>
-  <text id="svg_cpt" x="700" y="741" text-anchor="middle" font-family="Arial" font-size="14" fill="#ECEFF1" font-weight="bold">操作控制面板</text>
+  <g id="btnDown" cursor="pointer" transform="translate(940, 705)">
+   <rect x="0" y="0" width="230" height="60" rx="12" fill="#C62828" stroke="#B71C1C" stroke-width="2" filter="url(#shadow)"/>
+   <rect id="btnDownHov" x="4" y="4" width="222" height="20" rx="8" fill="rgba(255,255,255,0.15)"/>
+   <text x="115" y="38" text-anchor="middle" font-family="SimHei,Arial" font-size="28" fill="#FFF" font-weight="bold" pointer-events="none">降 落</text>
+  </g>
 
-  <!-- 操作说明 -->
-  <text id="svg_od1" x="70" y="773" font-family="Arial" font-size="11" fill="#666">升起: 电磁铁A得电, 换向阀左位, P->A进油, 液压缸伸出, 支撑臂升起</text>
-  <text id="svg_od2" x="70" y="791" font-family="Arial" font-size="11" fill="#666">降落: 电磁铁B得电, 换向阀右位, P->B进油, 液压缸缩回, 支撑臂降落</text>
-  <text id="svg_od3" x="70" y="809" font-family="Arial" font-size="11" fill="#666">停止: 双弹簧复位中位, 所有油口封闭, 液压目锁定</text>
+  <g id="btnStop" cursor="pointer" transform="translate(1190, 705)">
+   <rect x="0" y="0" width="230" height="60" rx="12" fill="#616161" stroke="#424242" stroke-width="2" filter="url(#shadow)"/>
+   <rect id="btnStopHov" x="4" y="4" width="222" height="20" rx="8" fill="rgba(255,255,255,0.15)"/>
+   <text x="115" y="38" text-anchor="middle" font-family="SimHei,Arial" font-size="28" fill="#FFF" font-weight="bold" pointer-events="none">停 止</text>
+  </g>
 
-  <!-- 升起按钮 -->
-  <rect id="svg_bu1" x="780" y="762" width="180" height="50" rx="10" fill="#2E7D32" stroke="#1B5E20" stroke-width="2" filter="url(#shadow)"/>
-  <rect id="svg_bu1h" x="784" y="766" width="172" height="18" rx="8" fill="rgba(255,255,255,0.15)"/>
-  <text id="svg_bu1t" x="870" y="795" text-anchor="middle" font-family="Arial" font-size="22" fill="white" font-weight="bold">升 起</text>
+  <!-- 系统运行状态综合栏 -->
+  <rect x="70" y="820" width="1350" height="90" rx="8" fill="#ECEFF1" stroke="#CFD8DC" stroke-width="2"/>
+  <text x="90" y="850" font-family="Arial" font-size="14" fill="#333" font-weight="bold">系统监控值:</text>
+  
+  <text x="210" y="850" font-family="Arial" font-size="13" fill="#666">电机/泵:</text>
+  <text id="ssPump" x="280" y="850" font-family="monospace" font-size="14" fill="#4CAF50" font-weight="bold">停止</text>
+  
+  <text x="360" y="850" font-family="Arial" font-size="13" fill="#666">换向阀向:</text>
+  <text id="ssValve" x="430" y="850" font-family="monospace" font-size="14" fill="#616161" font-weight="bold">中位</text>
+  
+  <text x="510" y="850" font-family="Arial" font-size="13" fill="#666">主油路压力:</text>
+  <text id="ssPress" x="590" y="850" font-family="monospace" font-size="14" fill="#C62828" font-weight="bold">0.0 MPa</text>
+  
+  <text x="700" y="850" font-family="Arial" font-size="13" fill="#666">液压缸行程:</text>
+  <text id="ssStroke" x="780" y="850" font-family="monospace" font-size="14" fill="#0D47A1" font-weight="bold">0 %</text>
+  
+  <text x="860" y="850" font-family="Arial" font-size="13" fill="#666">流量 Q:</text>
+  <text id="ssFlow" x="910" y="850" font-family="monospace" font-size="14" fill="#1565C0" font-weight="bold">0.0 L/min</text>
 
-  <!-- 降落按钮 -->
-  <rect id="svg_bd1" x="990" y="762" width="180" height="50" rx="10" fill="#C62828" stroke="#B71C1C" stroke-width="2" filter="url(#shadow)"/>
-  <rect id="svg_bd1h" x="994" y="766" width="172" height="18" rx="8" fill="rgba(255,255,255,0.15)"/>
-  <text id="svg_bd1t" x="1080" y="795" text-anchor="middle" font-family="Arial" font-size="22" fill="white" font-weight="bold">降 落</text>
+  <text x="90" y="885" font-family="Arial" font-size="14" fill="#333" font-weight="bold">当前状态码:</text>
+  <text id="ssAction" x="210" y="885" font-family="monospace" font-size="15" fill="#424242" font-weight="bold">[00] 系统待机</text>
 
-  <!-- 系统综合状态 -->
-  <rect id="svg_ss0" x="70" y="825" width="580" height="45" rx="6" fill="#F5F5F5" stroke="#E0E0E0"/>
-  <text id="svg_ss1" x="85" y="845" font-family="Arial" font-size="11" fill="#333" font-weight="bold">系统状态</text>
-  <line id="svg_ssl" x1="155" y1="832" x2="155" y2="858" stroke="#E0E0E0"/>
-  <text id="svg_ss2" x="170" y="845" font-family="Arial" font-size="10" fill="#666">液压泵:</text>
-  <text id="svg_ssv1" x="220" y="845" font-family="monospace" font-size="11" fill="#2E7D32" font-weight="bold">停止</text>
-  <text id="svg_ss3" x="285" y="845" font-family="Arial" font-size="10" fill="#666">换向阀:</text>
-  <text id="svg_ssv2" x="340" y="845" font-family="monospace" font-size="11" fill="#2E7D32" font-weight="bold">中位</text>
-  <text id="svg_ss4" x="400" y="845" font-family="Arial" font-size="10" fill="#666">系统压力:</text>
-  <text id="svg_ssv3" x="465" y="845" font-family="monospace" font-size="11" fill="#C62828" font-weight="bold">0.0 MPa</text>
-  <text id="svg_ss5" x="550" y="845" font-family="Arial" font-size="10" fill="#666">行程:</text>
-  <text id="svg_ssv4" x="590" y="845" font-family="monospace" font-size="11" fill="#0D47A1" font-weight="bold">0%</text>
-  <text id="svg_ss6" x="85" y="863" font-family="Arial" font-size="10" fill="#E65100">报警:</text>
-  <circle id="svg_ss7" cx="125" cy="859" r="5" fill="#4CAF50"/>
-  <text id="svg_ssv5" x="135" y="863" font-family="monospace" font-size="11" fill="#4CAF50" font-weight="bold">无报警 - 系统正常</text>
-
-  <!-- 状态指示灯 -->
-  <rect id="svg_si0" x="780" y="825" width="390" height="45" rx="6" fill="#F5F5F5" stroke="#E0E0E0"/>
-  <text id="svg_si1" x="800" y="845" font-family="Arial" font-size="11" fill="#333" font-weight="bold">指示灯</text>
-  <circle id="svg_si2" cx="870" cy="843" r="8" fill="#4CAF50" stroke="#388E3C" stroke-width="1.5"/>
-  <text id="svg_si3" x="883" y="847" font-family="Arial" font-size="10" fill="#555">运行</text>
-  <circle id="svg_si4" cx="930" cy="843" r="8" fill="#E0E0E0" stroke="#BDBDBD" stroke-width="1.5"/>
-  <text id="svg_si5" x="943" y="847" font-family="Arial" font-size="10" fill="#999">报警</text>
-  <circle id="svg_si6" cx="990" cy="843" r="8" fill="#E0E0E0" stroke="#BDBDBD" stroke-width="1.5"/>
-  <text id="svg_si7" x="1003" y="847" font-family="Arial" font-size="10" fill="#999">故障</text>
-  <circle id="svg_si8" cx="1050" cy="843" r="8" fill="#BDBDBD" stroke="#9E9E9E" stroke-width="1.5"/>
-  <text id="svg_si9" x="1063" y="847" font-family="Arial" font-size="10" fill="#999">待机</text>
-  <text id="svg_sil" x="1110" y="847" font-family="Arial" font-size="10" fill="#666">当前:</text>
-  <text id="svg_siv" x="1150" y="847" font-family="monospace" font-size="12" fill="#757575" font-weight="bold">待机中</text>
+  <!-- 指示灯组 -->
+  <g transform="translate(1050, 840)">
+   <circle id="ledRun" cx="0" cy="0" r="10" fill="#BDBDBD" stroke="#9E9E9E" stroke-width="2"/>
+   <text x="20" y="5" font-family="Arial" font-size="13" fill="#555">运行</text>
+   
+   <circle id="ledUp" cx="80" cy="0" r="10" fill="#BDBDBD" stroke="#9E9E9E" stroke-width="2"/>
+   <text x="100" y="5" font-family="Arial" font-size="13" fill="#555">升起</text>
+   
+   <circle id="ledDn" cx="160" cy="0" r="10" fill="#BDBDBD" stroke="#9E9E9E" stroke-width="2"/>
+   <text x="180" y="5" font-family="Arial" font-size="13" fill="#555">降落</text>
+   
+   <circle id="ledErr" cx="240" cy="0" r="10" fill="#BDBDBD" stroke="#9E9E9E" stroke-width="2"/>
+   <text x="260" y="5" font-family="Arial" font-size="13" fill="#555">故障</text>
+  </g>
  </g>
+
+ <!-- ================================================================ -->
+ <!-- JavaScript 交互动画与逻辑 -->
+ <script type="text/ecmascript"><![CDATA[
+  var state = 'stop';
+  var stroke = 0; // 行程 0-100%
+  var animTimer = null;
+  var waveTimer = null;
+  var svgDoc = null;
+
+  function init() {
+   svgDoc = document.documentElement;
+   var btnUp = document.getElementById('btnUp');
+   var btnDown = document.getElementById('btnDown');
+   var btnStop = document.getElementById('btnStop');
+   if(btnUp) btnUp.addEventListener('click', function(){ doAction('up'); });
+   if(btnDown) btnDown.addEventListener('click', function(){ doAction('down'); });
+   if(btnStop) btnStop.addEventListener('click', function(){ doAction('stop'); });
+   
+   // Hover effects
+   bindHover('btnUp', 'btnUpHov');
+   bindHover('btnDown', 'btnDownHov');
+   bindHover('btnStop', 'btnStopHov');
+  }
+
+  function bindHover(gId, hovId) {
+   var g = document.getElementById(gId);
+   var h = document.getElementById(hovId);
+   if(g && h) {
+    g.addEventListener('mouseover', function(){ h.setAttribute('fill', 'rgba(255,255,255,0.3)'); });
+    g.addEventListener('mouseout', function(){ h.setAttribute('fill', 'rgba(255,255,255,0.15)'); });
+   }
+  }
+
+  function getEl(id) { return document.getElementById(id); }
+
+  function setEl(id, attr, val) {
+   var el = getEl(id);
+   if(el) el.setAttribute(attr, val);
+  }
+
+  function setText(id, text) {
+   var el = getEl(id);
+   if(el) el.textContent = text;
+  }
+
+  function setAnimState(id, mode) {
+   var el = getEl(id);
+   if(!el) return;
+   var opacity = (mode === 'stop') ? '0' : '0.8';
+   el.setAttribute('opacity', opacity);
+   if (mode === 'up') {
+       if(id === 'flowP' || id === 'flowD' || id === 'flowS' || id === 'flowAv' || id === 'flowAh') el.setAttribute('stroke', '#E3F2FD');
+       if(id === 'flowT' || id === 'flowRV' || id === 'flowDVt' || id === 'flowBh') el.setAttribute('stroke', '#FFF3E0');
+   } else if (mode === 'down') {
+       if(id === 'flowP' || id === 'flowD' || id === 'flowS' || id === 'flowBh') el.setAttribute('stroke', '#E3F2FD');
+       if(id === 'flowT' || id === 'flowRV' || id === 'flowDVt' || id === 'flowAv' || id === 'flowAh') el.setAttribute('stroke', '#FFF3E0');
+   }
+  }
+
+  function doAction(act) {
+   if(state === act) return;
+   state = act;
+   if(animTimer) { clearInterval(animTimer); animTimer = null; }
+
+   var flows = ['flowP','flowT','flowS','flowD','flowRV','flowDVt','flowAv','flowAh','flowBh'];
+
+   if(act === 'up') {
+    // 阀门切换左位
+    setEl('posLeft', 'fill', '#444'); setEl('posLeft', 'stroke', '#4CAF50'); setEl('posLeft', 'stroke-width', '2');
+    setEl('posCenter', 'fill', '#333'); setEl('posCenter', 'stroke', 'none'); 
+    setEl('posRight', 'fill', '#333'); setEl('posRight', 'stroke', 'none');
+    setEl('posLeftTxt', 'opacity', '1'); setEl('posCenterTxt', 'opacity', '0.3'); setEl('posRightTxt', 'opacity', '0.3');
+    
+    // 管路颜色
+    setEl('pipeAv', 'fill', '#42A5F5'); setEl('pipeAh', 'fill', '#42A5F5'); setEl('pipeAd', 'fill', '#42A5F5');
+    setEl('pipeBv', 'fill', '#FFA726'); setEl('pipeBh', 'fill', '#FFA726'); setEl('pipeBd', 'fill', '#FFA726');
+
+    // 流动动画开启
+    for(var i=0;i<flows.length;i++) setAnimState(flows[i], 'up');
+    setEl('oilWave', 'opacity', '0.8');
+
+    // 电磁铁A亮
+    setEl('ledA', 'fill', '#4CAF50'); setEl('ledA', 'opacity', '1');
+    setEl('ledB', 'fill', '#4CAF50'); setEl('ledB', 'opacity', '0.2');
+
+    // 其他状态
+    setEl('motorLED', 'fill', '#4CAF50');
+    setText('motorTxt', 'RUN');
+    updateStatus('[01] 升起运行中', '运行', '左位', 15.0, 25.5);
+    setLeds('up');
+
+    animTimer = setInterval(function(){
+     if(stroke < 100){ stroke += 1.5; updateOutputs(); }
+     else { clearInterval(animTimer); animTimer = null; doAction('stop'); }
+    }, 50);
+
+   } else if(act === 'down') {
+    setEl('posRight', 'fill', '#444'); setEl('posRight', 'stroke', '#4CAF50'); setEl('posRight', 'stroke-width', '2');
+    setEl('posCenter', 'fill', '#333'); setEl('posCenter', 'stroke', 'none'); 
+    setEl('posLeft', 'fill', '#333'); setEl('posLeft', 'stroke', 'none');
+    setEl('posRightTxt', 'opacity', '1'); setEl('posCenterTxt', 'opacity', '0.3'); setEl('posLeftTxt', 'opacity', '0.3');
+
+    setEl('pipeAv', 'fill', '#FFA726'); setEl('pipeAh', 'fill', '#FFA726'); setEl('pipeAd', 'fill', '#FFA726');
+    setEl('pipeBv', 'fill', '#42A5F5'); setEl('pipeBh', 'fill', '#42A5F5'); setEl('pipeBd', 'fill', '#42A5F5');
+
+    for(var i=0;i<flows.length;i++) setAnimState(flows[i], 'down');
+    setEl('oilWave', 'opacity', '0.8');
+
+    setEl('ledB', 'fill', '#4CAF50'); setEl('ledB', 'opacity', '1');
+    setEl('ledA', 'fill', '#4CAF50'); setEl('ledA', 'opacity', '0.2');
+
+    setEl('motorLED', 'fill', '#4CAF50');
+    setText('motorTxt', 'RUN');
+    updateStatus('[02] 降落运行中', '运行', '右位', 12.0, 32.0);
+    setLeds('down');
+
+    animTimer = setInterval(function(){
+     if(stroke > 0){ stroke -= 1.5; updateOutputs(); }
+     else { clearInterval(animTimer); animTimer = null; doAction('stop'); }
+    }, 50);
+
+   } else {
+    // Stop
+    setEl('posCenter', 'fill', '#444'); setEl('posCenter', 'stroke', '#4CAF50'); setEl('posCenter', 'stroke-width', '2');
+    setEl('posLeft', 'fill', '#333'); setEl('posLeft', 'stroke', 'none'); 
+    setEl('posRight', 'fill', '#333'); setEl('posRight', 'stroke', 'none');
+    setEl('posCenterTxt', 'opacity', '1'); setEl('posLeftTxt', 'opacity', '0.3'); setEl('posRightTxt', 'opacity', '0.3');
+
+    setEl('pipeAv', 'fill', '#B0BEC5'); setEl('pipeAh', 'fill', '#B0BEC5'); setEl('pipeAd', 'fill', '#B0BEC5');
+    setEl('pipeBv', 'fill', '#B0BEC5'); setEl('pipeBh', 'fill', '#B0BEC5'); setEl('pipeBd', 'fill', '#B0BEC5');
+
+    for(var i=0;i<flows.length;i++) setAnimState(flows[i], 'stop');
+    setEl('oilWave', 'opacity', '0');
+
+    setEl('ledA', 'opacity', '0.2');
+    setEl('ledB', 'opacity', '0.2');
+    
+    setEl('motorLED', 'fill', '#9E9E9E');
+    setText('motorTxt', 'STOP');
+    updateStatus('[00] 系统待机锁定', '停止', '中位', 0.0, 0.0);
+    setLeds('stop');
+   }
+  }
+
+  function updateOutputs() {
+   // 缸行程 (120到300 是180宽. svg里偏移等比计算)
+   var offset = stroke * 1.8; 
+   var pg = getEl('pistonGroup');
+   if(pg) {
+    pg.setAttribute('transform', 'translate(' + offset + ', 0)');
+   }
+
+   // 支撑臂旋转 (-25 度 max. 1280, 275 是支点)
+   var angle = -stroke * 0.25;
+   var ag = getEl('armGroup');
+   if(ag) {
+    ag.setAttribute('transform', 'rotate(' + angle + ', 1280, 275)');
+   }
+
+   // 进度条
+   setText('strokeTxt', stroke.toFixed(1) + ' %');
+   setText('ssStroke', stroke.toFixed(1) + ' %');
+   setEl('strokeBar', 'width', (stroke * 2.5)); // 250宽 -> *2.5
+
+   // 液位降低模拟 (油被吸走) 
+   // 正常 82% 随行程改变.  61px高度是满(100%), 偏移
+   var oilH = 61 - (stroke * 0.08); // 最大降低8px
+   var yOffset = 45 + (stroke * 0.08);
+   setEl('oilLevel', 'height', oilH);
+   setEl('oilLevel', 'y', yOffset);
+  }
+
+  function updateStatus(action, pumpSt, valveSt, press, flow) {
+   setText('ssAction', action);
+   setText('ssPump', pumpSt);
+   setText('ssValve', valveSt);
+   setText('ssPress', press.toFixed(1) + ' MPa');
+   setText('ssFlow', flow.toFixed(1) + ' L/min');
+   setText('gaugePressTxt', press.toFixed(1) + ' MPa');
+
+   // 指针旋转: -40度 是 0 MPa, 140度 是 30MPa. 范围180度. (press/30)*180
+   var gnd = getEl('gaugeNeedleLRotate');
+   if(gnd) {
+    var ang = -40 + (press / 30) * 180;
+    gnd.setAttribute('transform', 'rotate(' + ang + ', 30, 40)');
+   }
+  }
+
+  function setLeds(mode) {
+   var cRun = getEl('ledRun'), cUp = getEl('ledUp'), cDn = getEl('ledDn');
+   if(mode === 'up') {
+    cRun.setAttribute('fill', '#4CAF50'); cUp.setAttribute('fill', '#4CAF50'); cDn.setAttribute('fill', '#BDBDBD');
+   } else if (mode === 'down') {
+    cRun.setAttribute('fill', '#4CAF50'); cUp.setAttribute('fill', '#BDBDBD'); cDn.setAttribute('fill', '#C62828');
+   } else {
+    cRun.setAttribute('fill', '#BDBDBD'); cUp.setAttribute('fill', '#BDBDBD'); cDn.setAttribute('fill', '#BDBDBD');
+   }
+  }
+
+  if(document.readyState === 'loading') {
+   document.addEventListener('DOMContentLoaded', init);
+  } else {
+   setTimeout(init, 200);
+  }
+ ]]></script>
 </svg>'''
+
 
 # 获取并更新项目
 req = urllib.request.Request(f'{BASE_URL}/api/project')
-resp = urllib.request.urlopen(req, timeout=10)
-project = json.loads(resp.read().decode())
+try:
+    resp = urllib.request.urlopen(req, timeout=10)
+    project = json.loads(resp.read().decode())
+except Exception as e:
+    print(f"无法连接到 FUXA 服务 {BASE_URL}: {e}")
+    exit(1)
 
 found = False
 for i, v in enumerate(project['hmi']['views']):
     if v['id'] == 'v_hydraulic_arm_01':
         project['hmi']['views'][i]['svgcontent'] = svg
-        # 更新视图尺寸
-        project['hmi']['views'][i]['profile']['width'] = 1400
-        project['hmi']['views'][i]['profile']['height'] = 900
-        project['hmi']['views'][i]['profile']['bkcolor'] = '#ECEFF1'
+        project['hmi']['views'][i]['profile']['width'] = 1600
+        project['hmi']['views'][i]['profile']['height'] = 950
+        project['hmi']['views'][i]['profile']['bkcolor'] = '#E8EAED'
         print(f'更新视图 SVG: {len(svg)} chars')
         found = True
         break
 
 if not found:
-    # 创建新视图
     new_view = {
         'id': 'v_hydraulic_arm_01',
-        'name': '液压支撑臂',
+        'name': '液压支撑臂真实控制',
         'profile': {
-            'width': 1400,
-            'height': 900,
-            'bkcolor': '#ECEFF1'
+            'width': 1600,
+            'height': 950,
+            'bkcolor': '#E8EAED'
         },
         'svgcontent': svg,
         'items': {}
@@ -553,11 +678,15 @@ req = urllib.request.Request(
     headers={'Content-Type': 'application/json'},
     method='POST'
 )
-resp = urllib.request.urlopen(req, timeout=30)
-print(f'项目更新: HTTP {resp.status}')
+try:
+    resp = urllib.request.urlopen(req, timeout=30)
+    print(f'项目更新: HTTP {resp.status}')
+except Exception as e:
+    print(f"推送 FUXA 失败: {e}")
+    exit(1)
 
 # 验证
-import time; time.sleep(1)
+time.sleep(1)
 req = urllib.request.Request(f'{BASE_URL}/api/project')
 resp = urllib.request.urlopen(req, timeout=10)
 data = json.loads(resp.read().decode())
@@ -565,9 +694,10 @@ for v in data.get('hmi', {}).get('views', []):
     if v.get('id') == 'v_hydraulic_arm_01':
         s = v.get('svgcontent', '')
         print(f'SVG 长度: {len(s)} chars')
-        checks = ['PUMP', 'MOTOR', 'OIL TANK', 'CYLINDER', 'SOL', 'animate', 'metalH', 'shadow']
-        for kw in checks:
-            print(f'  包含 "{kw}": {"Yes" if kw in s else "No"}')
+        checks = ['btnUp', 'btnDown', 'btnStop', 'metalH', 'oilFill', 'solenoid', 'pistonGroup', 'doAction', 'strokeBase']
+        
+        ok = sum(1 for kw in checks if kw in s)
+        print(f'通过检查点 {ok}/{len(checks)}')
         break
 
 print('完成! 请刷新浏览器 http://localhost:1881 查看效果')
